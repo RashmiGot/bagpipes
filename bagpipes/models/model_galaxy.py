@@ -21,6 +21,7 @@ from .agn_model import agn
 from .star_formation_history import star_formation_history
 from ..input.spectral_indices import measure_index
 
+import msaexp.resample_numba as msa_resamp_numba
 
 # The Voigt-Hjerting profile based on the numerical approximation by Garcia
 def H(a,x):
@@ -319,8 +320,15 @@ class model_galaxy(object):
         else:
             self._calculate_full_spectrum(model_components)
 
+        #if self.spec_wavs is not None:
+        #    self._calculate_spectrum(model_components)
+
+        #              
         if self.spec_wavs is not None:
-            self._calculate_spectrum(model_components)
+            if self.model_components["use_msa_resamp"]:
+                self._calculate_spectrum_msaexp_numba(model_components)
+            else:
+                self._calculate_spectrum(model_components)
 
         # Add any AGN component:
         if self.agn:
@@ -563,3 +571,19 @@ class model_galaxy(object):
 
     def plot_full_spectrum(self, show=True):
         return plotting.plot_full_spectrum(self, show=show)
+
+    def _calculate_spectrum_msaexp_numba(model_comp):
+        """This is an alternative function to '_calculate_spectrum',
+        which instead uses the msaexp resampling function with the
+        numba dependency."""
+    
+        fluxes = msa_resamp_numba.resample_template_numba(spec_wobs=self.spec_wavs,
+                                     spec_R_fwhm=self.resData_interp,
+                                     templ_wobs=self.wavelengths*(1+model_comp["redshift"]),
+                                     templ_flux=self.spectrum_full,
+                                     velocity_sigma=model_comp["veldisp"])
+    
+        if self.spec_units == "mujy":
+            fluxes /= ((10**-29*2.9979*10**18/self.spec_wavs**2))
+    
+        self.spectrum = np.c_[self.spec_wavs, fluxes]
