@@ -326,7 +326,7 @@ class model_galaxy(object):
         #              
         if self.spec_wavs is not None:
             if self.model_comp["use_msa_resamp"]:
-                self._calculate_spectrum_msaexp_numba(model_components)
+                self._calculate_spectrum_msaexp_numba(self,model_components)
             else:
                 self._calculate_spectrum(model_components)
 
@@ -572,7 +572,7 @@ class model_galaxy(object):
     def plot_full_spectrum(self, show=True):
         return plotting.plot_full_spectrum(self, show=show)
 
-    def _calculate_spectrum_msaexp_numba(model_comp):
+    def _calculate_spectrum_msaexp_numba(self, model_comp):
         """This is an alternative function to '_calculate_spectrum',
         which instead uses the msaexp resampling function with the
         numba dependency."""
