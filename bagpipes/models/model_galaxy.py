@@ -325,7 +325,7 @@ class model_galaxy(object):
 
         #              
         if self.spec_wavs is not None:
-            if self.model_components["use_msa_resamp"]:
+            if self.model_comp["use_msa_resamp"]:
                 self._calculate_spectrum_msaexp_numba(model_components)
             else:
                 self._calculate_spectrum(model_components)
