@@ -47,6 +47,10 @@ class fitted_model(object):
             self.times = np.zeros(1000)
             self.n_calls = 0
 
+        if self.fit_instructions["use_msa_resamp"]:
+            self.resData_interp = np.interp(self.galaxy.spec_wavs,
+                                            (self.fit_instructions["R_curve"])[:,0], (self.fit_instructions["R_curve"])[:,1])
+
     def _process_fit_instructions(self):
         all_keys = []           # All keys in fit_instructions and subs
         all_vals = []           # All vals in fit_instructions and subs
