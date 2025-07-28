@@ -10,6 +10,8 @@ from .calibration import calib_model
 from .noise import noise_model
 from ..models.model_galaxy import model_galaxy
 
+from .flexilines import msa_line_model
+
 
 class fitted_model(object):
     """ Contains a model which is to be fitted to observational data.
@@ -201,8 +203,8 @@ class fitted_model(object):
         else:
             model = self.model_galaxy.spectrum[:, 1]
 
-        # Calculate differences between model and observed spectrum
-        diff = (self.galaxy.spectrum[:, 1] - model)
+        # # Calculate differences between model and observed spectrum
+        # diff = (self.galaxy.spectrum[:, 1] - model)
 
         if "noise" in list(self.fit_instructions):
             if self.galaxy.spec_cov is not None:
@@ -214,6 +216,23 @@ class fitted_model(object):
         else:
             self.noise = noise_model({}, self.galaxy, model)
 
+        if self.galaxy.msa_line_components is not None:
+
+            msa_model, lsq_coeffs = msa_line_model(self, model, noise=self.noise)
+            model += msa_model
+
+            self.galaxy.msa_model.append(msa_model)
+            self.galaxy.lsq_coeffs.append(lsq_coeffs)
+
+            # Calculate differences between model and observed spectrum
+            diff = (self.galaxy.spectrum[:, 1] - model)
+
+            # Update diff attribute on noise: check that this is what is expected
+            self.noise.diff = diff / np.max(self.galaxy.spectrum[:,1])
+        else:
+            # Calculate differences between model and observed spectrum
+            diff = (self.galaxy.spectrum[:, 1] - model)
+            
         #
         if self.noise.corellated:
             lnlike_spec = self.noise.gp.lnlikelihood(self.noise.diff)
