@@ -18,7 +18,7 @@ negatively affects one or both of these things. """
 """ These variables control the wavelength sampling for models. """
 
 # Sets the maximum redshift the code is set up to calculate models for.
-max_redshift = 10.
+max_redshift = 20.
 
 # Sets the R = lambda/dlambda value for spectroscopic outputs.
 R_spec = 1000.
