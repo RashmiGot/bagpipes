@@ -66,7 +66,8 @@ latex_names = {"redshift": "z",
                "scaling": "s",
                "t_bc": "t_{BC}",
                "B": "B",
-               "delta": "\delta"}
+               "delta": "\delta",
+               "logU": "\\mathrm{logU}"}
 
 latex_units = {"metallicity": "Z_{\\odot}",
                "massformed": "M_{\\odot})}",
