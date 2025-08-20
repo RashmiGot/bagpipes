@@ -187,6 +187,10 @@ class posterior(object):
             size = self.model_galaxy.spectrum.shape[0]
             self.samples["calib"] = np.zeros((self.n_samples, size))
 
+        if "nebular" in list(self.fitted_model.model_components):
+            size = self.model_galaxy.spectrum.shape[0]
+            self.samples["line_fluxes"] = []
+
         if "noise" in list(self.fitted_model.model_components):
             type = self.fitted_model.model_components["noise"]["type"]
             if type.startswith("GP"):
@@ -207,6 +211,9 @@ class posterior(object):
 
             if "calib" in list(self.fitted_model.model_components):
                 self.samples["calib"][i] = self.fitted_model.calib.model
+                
+            if "nebular" in list(self.fitted_model.model_components):
+                self.samples["line_fluxes"].append(self.fitted_model.model_galaxy.line_fluxes)
 
             if "noise" in list(self.fitted_model.model_components):
                 type = self.fitted_model.model_components["noise"]["type"]
