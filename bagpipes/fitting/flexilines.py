@@ -120,11 +120,11 @@ def add_msaexp_emission_components(obj):
     
     Parameters
     ----------
-    filt_list : array of paths to filter files, each element is a string
+    obj : fitted_model object in bagpipes; format=object
 
     Returns
     -------
-    eff_wavs : effective wavelengths of the input filters, format=numpy array
+    _A : design matrix of line components; format=2D numpy array
     """
 
     # redshift
@@ -138,32 +138,42 @@ def add_msaexp_emission_components(obj):
     line_names_all = obj.galaxy.msa_line_components
 
     _A = [] # initialise design matrix
+    skipped_lines = []
 
     for li in line_names_all:
 
         if li not in lw:
+            skipped_lines.append(li)
             continue
 
-        lwi = lw[li][0] * (1 + z)
-
+        # handle multiple components per line (e.g., doublets)
+        line_total = None
+        
         for i, (lwi0, lri) in enumerate(zip(lw[li], lr[li])):
+            # convert rest wavelength to observed wavelength in microns
             lwi = lwi0 * (1 + z) / 1.0e4
 
             line_i = emission_line_templ(
                                 spec_wobs = obj.galaxy.spectrum[:, 0]/10000,
                                 spec_R_fwhm = R_curve_interp,
                                 line_um = lwi,
-                                line_flux = lri / np.sum(lr[li]), 
+                                line_flux = lri / np.sum(lr[li]),  # normalize component flux
                                 velocity_sigma = obj.fit_instructions["veldisp"],
                                 )
 
-            if i == 0:
-                line_0 = line_i
+            if line_total is None:
+                line_total = line_i
             else:
-                line_0 += line_i
+                line_total += line_i
 
-        _A.append(line_0 / 1.0e4) # append line to design matrix
+        _A.append(line_total / 1.0e4) 
 
+    if len(skipped_lines) > 0:
+        print(f"Warning: Skipped {len(skipped_lines)} lines not in grizli database: {skipped_lines}")
+
+    if len(_A) == 0:
+        raise ValueError("No valid emission lines found for fitting")
+        
     _A = np.vstack(_A)
         
     return (_A)
@@ -172,24 +182,102 @@ def add_msaexp_emission_components(obj):
 def msa_line_model(obj, model, noise=None):
     """
     Makes line models with msaexp
+
+    Parameters
+    ----------
+    obj : fitted_model object in bagpipes; format=object
+    model : bagpipes model spectrum; format=numpy array
+    noise : noise object in bagpipes; format=object
+
+    Returns
+    -------
+    msa_model : flexible line model; format=numpy array
+    lsq_coeffs : least-squares coefficients for line components; format=numpy array
     """
 
     # design matrix of line components
     A = add_msaexp_emission_components(obj)
 
-    # !!!!! UPDATE !!!!!
+    # spectrum data
     spec_fluxes = obj.galaxy.spectrum[:,1]
 
+    # inverse variance weighting
     if noise is None:
-        spec_sivar = 1/obj.galaxy.spectrum[:,2]
+        spec_ivar = 1.0 / obj.galaxy.spectrum[:,2]**2  # convert errors to inverse variance
     else:
-        spec_sivar = np.sqrt(noise.inv_var)
+        spec_ivar = noise.inv_var
 
-    model_diff = spec_fluxes - model # differences between spectrum and bagpipes model
+    # residuals between observed spectrum and bagpipes model
+    model_diff = spec_fluxes - model 
 
-    lsq_coeffs = np.linalg.lstsq((A*spec_sivar).T, model_diff*spec_sivar, rcond=None)
+    # weighted least squares fitting
+    try:
+        # weight the design matrix and residuals
+        A_weighted = (A * spec_ivar).T
+        residuals_weighted = model_diff * spec_ivar
 
+        # solve for line coefficients
+        lsq_coeffs = np.linalg.lstsq(A_weighted, residuals_weighted, rcond=None)
+            
+    except np.linalg.LinAlgError as e:
+        print(f"Linear algebra error in line fitting: {e}")
+        # return zero model if fitting fails
+        msa_model = np.zeros_like(model)
+        lsq_coeffs = [np.zeros(A.shape[0]), None, None, None]
+        return msa_model, lsq_coeffs
+
+    # construct the line model from fitted coefficients
     msa_model = (A.T).dot(lsq_coeffs[0])
 
     return msa_model, lsq_coeffs
 
+
+def calc_flux_in_filter(spec_wavs, spec_flux, filter_int, filt_norm, valid):
+    """
+    Calculate flux in a filter given a spectrum and filter throughput
+    
+    Parameters
+    ----------
+    spec_wavs : wavelengths of the spectrum; format=numpy array
+    spec_flux : flux values of the spectrum; format=numpy array
+    filter_int : interpolated filter throughput array; format=numpy array
+    filt_norm : normalization value for the filter; format=float
+    valid : boolean for valid spectrum pixels; format=numpy array
+
+    Returns
+    -------
+    flux : flux in the filter; format=float
+    """
+
+    # trapezoid rule steps
+    trapz_dx = utils.trapz_dx(spec_wavs)
+
+    flux = (
+            (filter_int / filt_norm * trapz_dx * spec_flux / spec_wavs)[
+                valid
+            ]
+        ).sum()
+    
+    return flux
+
+
+def calc_phot_fluxes(spec_wavs, spec_flux, filter_int_array, filt_norm_array, valid):
+    """
+    Calculate fluxes in multiple filters given a spectrum and filter throughputs
+
+    Parameters 
+    ----------
+    spec_wavs : wavelengths of the spectrum; format=numpy array
+    spec_flux : flux values of the spectrum; format=numpy array
+    filter_int_array : array of filter throughput arrays; format=2D numpy array
+    filt_norm_array : array of filter normalization values; format=1D numpy array
+    valid : boolean array for valid spectrum pixels; format=numpy array
+
+    Returns
+    -------
+    phot : list of fluxes in each filter; format=list of floats
+    """
+
+    phot = [calc_flux_in_filter(spec_wavs, spec_flux, filter_int, filt_norm, valid) for filter_int, filt_norm in zip(filter_int_array, filt_norm_array)]
+    
+    return phot

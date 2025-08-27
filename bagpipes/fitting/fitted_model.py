@@ -10,7 +10,9 @@ from .calibration import calib_model
 from .noise import noise_model
 from ..models.model_galaxy import model_galaxy
 
-from .flexilines import msa_line_model
+from .flexilines import msa_line_model, calc_phot_fluxes
+
+# from djapipes.fitting import synthetic_photometry_msa
 
 
 class fitted_model(object):
@@ -44,6 +46,10 @@ class fitted_model(object):
 
         self.prior = prior(self.limits, self.pdfs, self.hyper_params)
         self.model_galaxy = None
+
+        self.filt_int_arr = galaxy.filter_int_arr
+        self.filt_norm_arr = galaxy.filt_norm_arr
+        self.filt_valid = galaxy.filt_valid
 
         if self.time_calls:
             self.times = np.zeros(1000)
@@ -182,7 +188,20 @@ class fitted_model(object):
     def _lnlike_phot(self):
         """ Calculates the log-likelihood for photometric data. """
 
-        diff = (self.galaxy.photometry[:, 1] - self.model_galaxy.photometry)**2
+        if self.galaxy.msa_phot is not None:
+
+            msa_phot = calc_phot_fluxes(self.model_galaxy.spec_wavs,
+                                        self.galaxy.msa_model_current,
+                                        self.filt_int_arr,
+                                        self.filt_norm_arr,
+                                        self.filt_valid)
+
+            self.galaxy.msa_phot.append(msa_phot)
+
+            diff = (self.galaxy.photometry[:, 1] - msa_phot)**2
+        else:
+            diff = (self.galaxy.photometry[:, 1] - self.model_galaxy.photometry)**2
+
         self.chisq_phot = np.sum(diff*self.inv_sigma_sq_phot)
 
         return self.K_phot - 0.5*self.chisq_phot
@@ -224,10 +243,13 @@ class fitted_model(object):
             self.galaxy.msa_model.append(msa_model)
             self.galaxy.lsq_coeffs.append(lsq_coeffs)
 
+            if self.galaxy.msa_phot is not None:
+                self.galaxy.msa_model_current = model * self.calib.model
+
             # Calculate differences between model and observed spectrum
             diff = (self.galaxy.spectrum[:, 1] - model)
 
-            # Update diff attribute on noise: check that this is what is expected
+            # Update diff attribute on noise: checked that this is what is expected in noise.py #L39
             self.noise.diff = diff / np.max(self.galaxy.spectrum[:,1])
         else:
             # Calculate differences between model and observed spectrum
