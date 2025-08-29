@@ -57,43 +57,13 @@ sfr_timescale = 10**8  # This is 100 Myr by default
 """ These variables tell the code where to find the raw stellar emission
 models, as well as some of their basic properties. """
 
-# try:
-#     # Name of the fits file storing the stellar models
-#     stellar_file = "bc03_miles_stellar_grids.fits"
-
-#     # The metallicities of the stellar grids in units of Z_Solar
-#     metallicities = np.array([0.005, 0.02, 0.2, 0.4, 1., 2.5, 5.])
-
-#     # The wavelengths of the grid points in Angstroms
-#     wavelengths = fits.open(grid_dir + "/" + stellar_file)[-1].data
-
-#     # The ages of the grid points in Gyr
-#     raw_stellar_ages = fits.open(grid_dir + "/" + stellar_file)[-2].data
-
-#     # The fraction of stellar mass still living (1 - return fraction).
-#     # Axis 0 runs over metallicity, axis 1 runs over age.
-#     live_frac = fits.open(grid_dir + "/" + stellar_file)[-3].data[:, 1:]
-
-#     # The raw stellar grids, stored as a FITS HDUList.
-#     # The different HDUs are the grids at different metallicities.
-#     # Axis 0 of each grid runs over wavelength, axis 1 over age.
-#     raw_stellar_grid = fits.open(grid_dir + "/" + stellar_file)[1:8]
-
-#     # Set up edge positions for metallicity bins for stellar models.
-#     metallicity_bins = make_bins(metallicities, make_rhs=True)[0]
-#     metallicity_bins[0] = 0.
-#     metallicity_bins[-1] = 10.
-
-#BPASS!
 try:
     # Name of the fits file storing the stellar models
-    print('** using BPASS v2.2.1 model grids')
-    stellar_file = "bpass_2.2.1_bin_imf135_300_stellar_grids.fits"
+    stellar_file = "bc03_miles_stellar_grids.fits"
 
     # The metallicities of the stellar grids in units of Z_Solar
-    metallicities = np.array([10**-5, 10**-4, 0.001, 0.002, 0.003, 0.004,
-                              0.006, 0.008, 0.010, 0.014, 0.020, 0.030,
-                              0.040])/0.02
+    metallicities = np.array([0.005, 0.02, 0.2, 0.4, 1., 2.5, 5.])
+
     # The wavelengths of the grid points in Angstroms
     wavelengths = fits.open(grid_dir + "/" + stellar_file)[-1].data
 
@@ -102,18 +72,17 @@ try:
 
     # The fraction of stellar mass still living (1 - return fraction).
     # Axis 0 runs over metallicity, axis 1 runs over age.
-    live_frac = fits.open(grid_dir + "/" + stellar_file)[-3].data
+    live_frac = fits.open(grid_dir + "/" + stellar_file)[-3].data[:, 1:]
 
     # The raw stellar grids, stored as a FITS HDUList.
     # The different HDUs are the grids at different metallicities.
     # Axis 0 of each grid runs over wavelength, axis 1 over age.
-    raw_stellar_grid = fits.open(grid_dir + "/" + stellar_file)[1:14]
+    raw_stellar_grid = fits.open(grid_dir + "/" + stellar_file)[1:8]
 
     # Set up edge positions for metallicity bins for stellar models.
     metallicity_bins = make_bins(metallicities, make_rhs=True)[0]
     metallicity_bins[0] = 0.
     metallicity_bins[-1] = 10.
-
 
 except IOError:
     print("Failed to load stellar grids, these should be placed in"
@@ -125,36 +94,15 @@ models, as well as some of their basic properties. """
 
 try:
     # Names of files containing the nebular grids.
-    #neb_cont_file = "bc03_miles_nebular_cont_grids.fits"
-    #neb_line_file = "bc03_miles_nebular_line_grids.fits"
-    # neb_cont_file = "bc03_miles_higherLogU_nebular_cont_grids.fits"
-    # neb_line_file = "bc03_miles_higherLogU_nebular_line_grids.fits"
-
-    # neb_cont_file = "bpass_2.2.1_bin_imf135_300_nebular_cont_grids.fits"
-    # neb_line_file = "bpass_2.2.1_bin_imf135_300_nebular_line_grids.fits"
-    
-    #print(' ** using new cloudy grids with no dust, fixes recombination line luminosities at highZ and logU')
-    #neb_cont_file = "bpass_2.2.1_bin_imf135_300_nebular_cont_grids_nodust.fits"
-    #neb_line_file = "bpass_2.2.1_bin_imf135_300_nebular_line_grids_nodust.fits"
+    neb_cont_file = "bc03_miles_nebular_cont_grids_extended.fits"
+    neb_line_file = "bc03_miles_nebular_line_grids_extended.fits"
 
     # Names for the emission features to be tracked.
-    #line_names = np.loadtxt(grid_dir + "/cloudy_lines.txt",
-    #                        dtype="str", delimiter="}")
-
-    # Wavelengths of these emission features in Angstroms.
-    #line_wavs = np.loadtxt(grid_dir + "/cloudy_linewavs.txt")
-
-    print(' ** using new cloudy grids with no dust, fixes recombination line luminosities at highZ and logU')
-    print(' ** using hden2p5, logU=(-4,0.5,0), and extended emission line list, plus vacuum wavelengths')
-    neb_cont_file = "bpass_2.2.1_bin_imf135_300_nebular_cont_grids_nodust_hden2p5_logUm4to0_extLines.fits"
-    neb_line_file = "bpass_2.2.1_bin_imf135_300_nebular_line_grids_nodust_hden2p5_logUm4to0_extLines.fits"
-
-    # Names for the emission features to be tracked.
-    line_names = np.loadtxt(grid_dir + "/cloudy_lines_ext.txt",
+    line_names = np.loadtxt(grid_dir + "/cloudy_lines.txt",
                             dtype="str", delimiter="}")
 
     # Wavelengths of these emission features in Angstroms.
-    line_wavs = np.loadtxt(grid_dir + "/cloudy_linewavs_ext.txt")
+    line_wavs = np.loadtxt(grid_dir + "/cloudy_linewavs.txt")
 
     # Ages for the nebular emission grids.
     neb_ages = fits.open(grid_dir
@@ -164,26 +112,15 @@ try:
     neb_wavs = fits.open(grid_dir + "/" + neb_cont_file)[1].data[0, 1:]
 
     # LogU values for the nebular emission grids.
-    #logU = np.arange(-4., -1.99, 0.5)
-    logU = np.arange(-4., 0.01, 0.5) ## expand grid up to logU=0
+    logU = np.arange(-4., 0.01, 0.5)
 
     # Grid of line fluxes.
-    # line_grid = [fits.open(grid_dir + "/" + neb_line_file)[i].data for
-    #              i in range(len(metallicities) * len(logU) + 1)]
-    # safer way that also closes
-    line_hdu = fits.open(grid_dir + "/" + neb_line_file)
-    line_grid = [line_hdu[i].data for
+    line_grid = [fits.open(grid_dir + "/" + neb_line_file)[i].data for
                  i in range(len(metallicities) * len(logU) + 1)]
-    line_hdu.close()
 
     # Grid of nebular continuum fluxes.
-    # cont_grid = [fits.open(grid_dir + "/" + neb_cont_file)[i].data for
-    #              i in range(len(metallicities) * len(logU) + 1)]
-    # safer way that also closes the file
-    cont_hdu = fits.open(grid_dir + "/" + neb_cont_file)
-    cont_grid = [cont_hdu[i].data for
-                  i in range(len(metallicities) * len(logU) + 1)]
-    cont_hdu.close()
+    cont_grid = [fits.open(grid_dir + "/" + neb_cont_file)[i].data for
+                 i in range(len(metallicities) * len(logU) + 1)]
 
 except IOError:
     print("Failed to load nebular grids, these should be placed in the"
@@ -204,23 +141,13 @@ try:
                           2.37, 2.50, 3.19, 3.90, 4.58])
 
     # Draine + Li (2007) dust emission grids, stored as a FITS HDUList.
-    # dust_grid_umin_only = [
-    #     fits.open(grid_dir + "/dl07_grids_umin_only.fits")[i].data for i
-    #     in range(len(qpah_vals) + 1)]
-    dust_hdu = fits.open(grid_dir + "/dl07_grids_umin_only.fits")
     dust_grid_umin_only = [
-        dust_hdu[i].data for i
+        fits.open(grid_dir + "/dl07_grids_umin_only.fits")[i].data for i
         in range(len(qpah_vals) + 1)]
-    dust_hdu.close()
 
-    # dust_grid_umin_umax = [
-    #     fits.open(grid_dir + "/dl07_grids_umin_umax.fits")[i].data for i
-    #     in range(len(qpah_vals) + 1)]
-    dust_hdu2 = fits.open(grid_dir + "/dl07_grids_umin_umax.fits")
     dust_grid_umin_umax = [
-        dust_hdu2[i].data for i
+        fits.open(grid_dir + "/dl07_grids_umin_umax.fits")[i].data for i
         in range(len(qpah_vals) + 1)]
-    dust_hdu2.close()
 
 except IOError:
     print("Failed to load dust emission grids, these should be placed in the"
