@@ -212,6 +212,8 @@ class fit(object):
 
             print("\nCompleted in " + str("%.1f" % runtime) + " seconds.\n")
 
+            self.results["runtime"] = runtime
+
             # Load MultiNest outputs and save basic quantities to file.
             if sampler == "multinest":
                 samples2d = np.loadtxt(self.fname + "post_equal_weights.dat")
